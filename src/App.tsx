@@ -11,6 +11,7 @@ import { hasActiveApiKey, openApiKeySelector, isUserKeySelected } from './servic
 import InteractiveMap from './components/InteractiveMap';
 import ChatBot from './components/ChatBot';
 import clsx from 'clsx';
+import { Analytics } from "@vercel/analytics/next"
 
 export default function App() {
   const [loading, setLoading] = useState(false);
