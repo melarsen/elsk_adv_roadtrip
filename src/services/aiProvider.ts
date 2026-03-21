@@ -10,34 +10,37 @@ declare global {
 }
 
 export const getAIClient = () => {
-  // Bruk API_KEY fra dialogen hvis valgt, ellers systemets GEMINI_API_KEY
-  const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+  // 1. Sjekk AI Studio bruker-nøkkel (valgt i dialog)
+  // 2. Sjekk AI Studio system-nøkkel
+  // 3. Sjekk standard Vite miljøvariabel (for Vercel/GitHub)
+  const apiKey = 
+    process.env.API_KEY || 
+    process.env.GEMINI_API_KEY || 
+    (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY);
   
   if (!apiKey || apiKey === "AI Studio Free Tier") {
-    throw new Error("API-nøkkel mangler. Vennligst velg en nøkkel for å fortsette.");
+    throw new Error("API-nøkkel mangler. Vennligst sett VITE_GEMINI_API_KEY i Vercel eller velg en nøkkel i AI Studio.");
   }
   
   return new GoogleGenAI({ apiKey });
 };
 
 export const isUserKeySelected = (): boolean => {
-  return !!process.env.API_KEY;
+  return !!(process.env.API_KEY || (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY));
 };
 
 export const hasActiveApiKey = async (): Promise<boolean> => {
-  // Sjekk om brukeren har valgt en nøkkel via dialogen (API_KEY)
+  // Sjekk om vi har en nøkkel fra miljøvariabler (Vercel eller AI Studio)
   if (process.env.API_KEY) return true;
+  if (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) return true;
 
-  // Sjekk systemnøkkelen
+  // Sjekk systemnøkkelen i AI Studio
   const systemKey = process.env.GEMINI_API_KEY;
   if (systemKey && systemKey !== "AI Studio Free Tier") {
-    // Vi har en systemnøkkel, men vi sjekker også om plattformen sier vi har en valgt nøkkel
     if (window.aistudio) {
       const selected = await window.aistudio.hasSelectedApiKey();
       if (selected) return true;
     }
-    // Hvis vi er i "shared" modus, vil vi ofte tvinge brukeren til å velge sin egen nøkkel
-    // for å unngå kvotebegrensninger på systemnøkkelen.
     return true; 
   }
   
