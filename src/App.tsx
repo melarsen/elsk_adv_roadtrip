@@ -10,7 +10,7 @@ import { generateTripPlan, TripPlan, TripRequest } from './services/geminiServic
 import { hasActiveApiKey, openApiKeySelector, isUserKeySelected } from './services/aiProvider';
 import { buildTripPlanPdf, triggerPdfDownload } from './services/pdfService';
 import { uploadTripPdfToSupabase } from './services/supabaseStorage';
-import { getAdminTripHistory, getLocalTripHistory, getOrCreateUserId, saveLocalTripHistory, saveTripHistoryToSupabase, TripHistoryItem } from './services/tripHistoryService';
+import { getAdminTripHistory, getExampleTripHistory, getLocalTripHistory, getOrCreateUserId, saveLocalTripHistory, saveTripHistoryToSupabase, setTripExampleFlag, TripHistoryItem } from './services/tripHistoryService';
 import InteractiveMap from './components/InteractiveMap';
 import ChatBot from './components/ChatBot';
 import clsx from 'clsx';
@@ -22,9 +22,11 @@ export default function App() {
   const [savingPdf, setSavingPdf] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [routePath, setRoutePath] = useState(() => window.location.pathname);
-  const [activeView, setActiveView] = useState<'planner' | 'history'>('planner');
+  const [activeView, setActiveView] = useState<'planner' | 'history' | 'examples'>('planner');
   const [historyItems, setHistoryItems] = useState<TripHistoryItem[]>([]);
   const [adminItems, setAdminItems] = useState<TripHistoryItem[]>([]);
+  const [exampleItems, setExampleItems] = useState<TripHistoryItem[]>([]);
+  const [examplesLoading, setExamplesLoading] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
@@ -39,6 +41,7 @@ export default function App() {
     checkKey();
 
     setHistoryItems(getLocalTripHistory());
+    void refreshExampleTrips();
 
     const onPopState = () => {
       setRoutePath(window.location.pathname);
@@ -49,6 +52,19 @@ export default function App() {
       window.removeEventListener('popstate', onPopState);
     };
   }, []);
+
+  const refreshExampleTrips = async () => {
+    setExamplesLoading(true);
+    try {
+      const items = await getExampleTripHistory();
+      setExampleItems(items);
+    } catch (error) {
+      console.error(error);
+      setExampleItems([]);
+    } finally {
+      setExamplesLoading(false);
+    }
+  };
 
   const handleSelectKey = async () => {
     await openApiKeySelector();
@@ -132,6 +148,7 @@ export default function App() {
         summary: generatedPlan.summary,
         googleMapsLink: generatedPlan.googleMapsLink || '',
         pdfUrl,
+        isExample: false,
       };
 
       saveLocalTripHistory(historyItem);
@@ -192,6 +209,23 @@ export default function App() {
       setAdminItems(items);
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Could not refresh admin history');
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const handleSetExampleTrip = async (tripId: string, isExample: boolean) => {
+    setAdminLoading(true);
+    try {
+      await setTripExampleFlag(tripId, isExample);
+      const [adminHistory, examples] = await Promise.all([
+        getAdminTripHistory(),
+        getExampleTripHistory(),
+      ]);
+      setAdminItems(adminHistory);
+      setExampleItems(examples);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Could not update example status');
     } finally {
       setAdminLoading(false);
     }
@@ -299,8 +333,10 @@ export default function App() {
               <button
                 onClick={() => setActiveView('planner')}
                 className={clsx(
-                  'px-7 py-3 rounded-lg text-lg font-semibold transition-colors shadow-lg shadow-black/20',
-                  activeView === 'planner' ? 'bg-[#ef4e2f] text-white hover:bg-[#d84528]' : 'bg-[#ef4e2f] text-white hover:bg-[#d84528]',
+                  'px-7 py-3 rounded-lg text-lg font-semibold transition-colors',
+                  activeView === 'planner'
+                    ? 'bg-[#ef4e2f] text-white hover:bg-[#d84528] shadow-lg shadow-black/20'
+                    : 'border border-white/80 text-white bg-white/5 hover:bg-white/15',
                 )}
               >
                 Plan my trip
@@ -311,11 +347,27 @@ export default function App() {
                   setActiveView('history');
                 }}
                 className={clsx(
-                  'px-7 py-3 rounded-lg text-lg font-semibold transition-colors border',
-                  activeView === 'history' ? 'border-white text-white bg-white/20' : 'border-white/80 text-white bg-white/5 hover:bg-white/15',
+                  'px-7 py-3 rounded-lg text-lg font-semibold transition-colors',
+                  activeView === 'history'
+                    ? 'bg-[#ef4e2f] text-white hover:bg-[#d84528] shadow-lg shadow-black/20'
+                    : 'border border-white/80 text-white bg-white/5 hover:bg-white/15',
                 )}
               >
-                See routes
+                My routes
+              </button>
+              <button
+                onClick={() => {
+                  void refreshExampleTrips();
+                  setActiveView('examples');
+                }}
+                className={clsx(
+                  'px-7 py-3 rounded-lg text-lg font-semibold transition-colors',
+                  activeView === 'examples'
+                    ? 'bg-[#ef4e2f] text-white hover:bg-[#d84528] shadow-lg shadow-black/20'
+                    : 'border border-white/80 text-white bg-white/5 hover:bg-white/15',
+                )}
+              >
+                See examples
               </button>
             </motion.div>
           )}
@@ -379,7 +431,14 @@ export default function App() {
                       <article key={item.id} className="bg-white border border-slate-100 rounded-2xl p-5 space-y-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <h3 className="text-lg font-semibold text-slate-800">{item.start} to {item.destination}</h3>
-                          <span className="text-xs text-slate-500">{new Date(item.createdAt).toLocaleString()}</span>
+                          <div className="flex items-center gap-2">
+                            {item.isExample && (
+                              <span className="text-[11px] font-semibold uppercase tracking-wide bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
+                                Example
+                              </span>
+                            )}
+                            <span className="text-xs text-slate-500">{new Date(item.createdAt).toLocaleString()}</span>
+                          </div>
                         </div>
                         <p className="text-slate-600 text-sm">User: {item.userId}</p>
                         <p className="text-slate-600 text-sm">{item.summary}</p>
@@ -392,6 +451,13 @@ export default function App() {
                               Open route in Google Maps
                             </a>
                           )}
+                          <button
+                            onClick={() => void handleSetExampleTrip(item.id, !item.isExample)}
+                            disabled={adminLoading}
+                            className="text-slate-600 hover:text-slate-900 underline underline-offset-4 disabled:opacity-50"
+                          >
+                            {item.isExample ? 'Remove example' : 'Use as example'}
+                          </button>
                         </div>
                       </article>
                     ))}
@@ -737,6 +803,47 @@ export default function App() {
             ) : (
               <div className="space-y-4">
                 {historyItems.map((item) => (
+                  <article key={item.id} className="bg-white border border-slate-100 rounded-2xl p-5 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-lg font-semibold text-slate-800">{item.start} to {item.destination}</h3>
+                      <span className="text-xs text-slate-500">{new Date(item.createdAt).toLocaleString()}</span>
+                    </div>
+                    <p className="text-slate-600 text-sm">{item.summary}</p>
+                    <div className="flex flex-wrap gap-4 text-sm">
+                      <a href={item.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-romantic-600 hover:text-romantic-700 underline underline-offset-4">
+                        Open PDF
+                      </a>
+                      {item.googleMapsLink && (
+                        <a href={item.googleMapsLink} target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-slate-800 underline underline-offset-4">
+                          Open route in Google Maps
+                        </a>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeView === 'examples' && (
+          <section className="glass-card p-8 mb-12 space-y-6">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-3xl font-serif text-slate-800">Example Roadtrips</h2>
+              <button
+                onClick={() => void refreshExampleTrips()}
+                className="btn-primary py-2 px-4 text-sm"
+                disabled={examplesLoading}
+              >
+                {examplesLoading ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
+
+            {exampleItems.length === 0 ? (
+              <p className="text-slate-600">No example trips yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {exampleItems.map((item) => (
                   <article key={item.id} className="bg-white border border-slate-100 rounded-2xl p-5 space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <h3 className="text-lg font-semibold text-slate-800">{item.start} to {item.destination}</h3>

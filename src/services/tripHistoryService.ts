@@ -12,6 +12,7 @@ export interface TripHistoryItem {
   summary: string;
   googleMapsLink: string;
   pdfUrl: string;
+  isExample: boolean;
 }
 
 function parseLocalHistory(json: string | null): TripHistoryItem[] {
@@ -37,7 +38,12 @@ export function getOrCreateUserId() {
 
 export function getLocalTripHistory(): TripHistoryItem[] {
   const history = parseLocalHistory(localStorage.getItem(localHistoryKey));
-  return [...history].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return [...history]
+    .map((item) => ({
+      ...item,
+      isExample: Boolean(item.isExample),
+    }))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 export function saveLocalTripHistory(item: TripHistoryItem) {
@@ -74,7 +80,7 @@ export async function getAdminTripHistory(limit = 200): Promise<TripHistoryItem[
 
   const { data, error } = await supabase
     .from('roadtrip_history')
-    .select('id, created_at, user_id, start, destination, summary, google_maps_link, pdf_url')
+    .select('id, created_at, user_id, start, destination, summary, google_maps_link, pdf_url, is_example')
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -91,5 +97,50 @@ export async function getAdminTripHistory(limit = 200): Promise<TripHistoryItem[
     summary: row.summary,
     googleMapsLink: row.google_maps_link,
     pdfUrl: row.pdf_url,
+    isExample: Boolean(row.is_example),
+  }));
+}
+
+export async function setTripExampleFlag(tripId: string, isExample: boolean) {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { error } = await supabase
+    .from('roadtrip_history')
+    .update({ is_example: isExample })
+    .eq('id', tripId);
+
+  if (error) {
+    throw new Error(`Could not update example flag: ${error.message}`);
+  }
+}
+
+export async function getExampleTripHistory(limit = 50): Promise<TripHistoryItem[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('roadtrip_history')
+    .select('id, created_at, user_id, start, destination, summary, google_maps_link, pdf_url, is_example')
+    .eq('is_example', true)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(`Could not load example trips: ${error.message}`);
+  }
+
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    createdAt: row.created_at,
+    userId: row.user_id,
+    start: row.start,
+    destination: row.destination,
+    summary: row.summary,
+    googleMapsLink: row.google_maps_link,
+    pdfUrl: row.pdf_url,
+    isExample: Boolean(row.is_example),
   }));
 }
