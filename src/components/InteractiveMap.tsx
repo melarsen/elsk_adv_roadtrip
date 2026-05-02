@@ -7,7 +7,7 @@ export default function InteractiveMap({ plan }: { plan: TripPlan }) {
   
   plan.days.forEach((day) => {
     // Add start of day
-    allPoints.push({ ...day.startCoords, name: `Start Dag ${day.day}` });
+    allPoints.push({ ...day.startCoords, name: `Start Day ${day.day}` });
     
     // Add POIs
     day.pois.forEach(poi => {
@@ -20,7 +20,7 @@ export default function InteractiveMap({ plan }: { plan: TripPlan }) {
     });
     
     // Add end of day
-    allPoints.push({ ...day.endCoords, name: `Slutt Dag ${day.day}` });
+    allPoints.push({ ...day.endCoords, name: `End Day ${day.day}` });
   });
 
   // Build the directions URL for embedding
@@ -41,7 +41,7 @@ export default function InteractiveMap({ plan }: { plan: TripPlan }) {
   return (
     <div className="h-[600px] w-full rounded-3xl overflow-hidden shadow-inner border border-slate-200 bg-slate-100 relative">
       <iframe
-        title="Reisekart"
+        title="Trip map"
         width="100%"
         height="100%"
         style={{ border: 0 }}
@@ -52,7 +52,7 @@ export default function InteractiveMap({ plan }: { plan: TripPlan }) {
       />
       <div className="absolute bottom-4 right-4 z-10 flex gap-2">
         <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg text-[10px] font-medium text-slate-500 border border-slate-100">
-          {allPoints.length} stoppesteder inkludert
+          {allPoints.length} stops included
         </div>
         <a 
           href={plan.googleMapsLink} 
@@ -60,7 +60,7 @@ export default function InteractiveMap({ plan }: { plan: TripPlan }) {
           rel="noopener noreferrer"
           className="bg-romantic-600 px-4 py-2 rounded-full shadow-lg text-xs font-bold text-white flex items-center gap-2 hover:bg-romantic-700 transition-colors"
         >
-          Åpne i Google Maps App
+          Open in Google Maps App
         </a>
       </div>
     </div>

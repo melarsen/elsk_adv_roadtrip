@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Tilted red heart">
+  <g transform="translate(32 32) rotate(-18) translate(-32 -32)">
+    <path d="M32 56L28 52.4C14.4 40 6 32.4 6 23.2C6 15.6 12 10 19.6 10C23.9 10 28.1 12 32 16.5C35.9 12 40.1 10 44.4 10C52 10 58 15.6 58 23.2C58 32.4 49.6 40 36 52.4L32 56Z" fill="#e03131"/>
+  </g>
+</svg>

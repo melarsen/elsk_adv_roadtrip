@@ -1,4 +1,4 @@
-import { getAIClient } from "./aiProvider";
+import { getAIClientsWithFallback } from "./aiProvider";
 
 export interface TripRequest {
   start: string;
@@ -46,78 +46,101 @@ export interface TripPlan {
 }
 
 export async function generateTripPlan(req: TripRequest): Promise<TripPlan> {
-  const ai = getAIClient();
+  const aiClients = getAIClientsWithFallback();
+  if (aiClients.length === 0) {
+    throw new Error("API key is missing. Please set VITE_GEMINI_API_KEY_1 (or _2/_3).");
+  }
   
-  // Vi bruker gemini-flash-latest for best kompatibilitet med gratis-nøkler
+  // Use gemini-flash-latest for broad compatibility with free-tier keys.
   const modelName = "gemini-flash-latest";
   
   const prompt = `
-    Du er en ekspert reiseplanlegger for kjærestepar. Planlegg en biltur fra "${req.start}" til "${req.destination}"${req.waypoints ? ` via "${req.waypoints}"` : ""}.
+    You are an expert road trip planner for couples. Plan a road trip from "${req.start}" to "${req.destination}"${req.waypoints ? ` via "${req.waypoints}"` : ""}.
     
-    Kriterier:
-    - Kjøretid per dag: ca. ${req.hoursPerDay} timer.
-    - Reisende: Et par, alder ${req.age}.
-    - Interesser: ${req.interests}.
-    ${req.waypoints ? `- Viktig: Ruten MÅ gå innom følgende steder: ${req.waypoints}.` : ""}
-    - Stil: En blanding av hovedveier og naturskjønne sideveier.
-    - Budsjett: Hyggelige steder som ikke er altfor kostbare.
+    Criteria:
+    - Driving time per day: about ${req.hoursPerDay} hours.
+    - Travelers: A couple, age ${req.age}.
+    - Interests: ${req.interests}.
+    ${req.waypoints ? `- Important: The route MUST pass through these places: ${req.waypoints}.` : ""}
+    - Style: A mix of main roads and scenic backroads.
+    - Budget: Nice places that are not overly expensive.
 
-    For hver dagsetappe:
-    1. Beskriv ruten.
-    2. Foreslå 2-6 severdigheter/stoppesteder (POI) som passer parets alder og interesser. Forklar hvorfor det er romantisk eller interessant for akkurat dem. Inkluder nøyaktige GPS-koordinater og en VERIFISERT lenke til deres offisielle nettside eller Wikipedia-side.
-    3. Foreslå 2-4 overnattingssteder ved dagens slutt. For hvert sted:
-       - Navn og lokasjon.
-       - Prisestimat for dobbeltrom (i lokal valuta eller NOK).
-       - Beskrivelse av omgivelsene i gangavstand.
-       - Hvorfor det anbefales spesielt.
-       - Kilde (f.eks. Booking.com, Hotels.com, Airbnb).
-       - Nøyaktige GPS-koordinater.
-       - En VERIFISERT lenke til deres offisielle nettside, Booking-side eller Wikipedia-side.
-       - Inkluder 2-4 bilde-URL-er (bruk https://picsum.photos/seed/{random}/800/600).
-    4. Inkluder start- og sluttkoordinater for selve kjøreetappen den dagen.
+    For each day:
+    1. Describe the route.
+    2. Suggest 2-6 attractions/stops (POIs) that match the couple's age and interests. Explain why each is romantic or interesting for them. Include exact GPS coordinates and a VERIFIED link to an official website or Wikipedia page.
+    3. Suggest 2-4 accommodations at the end of the day. For each place include:
+       - Name and location.
+       - Price estimate for a double room (local currency or NOK).
+       - A description of nearby walkable surroundings.
+       - Why it is especially recommended.
+       - Source (e.g. Booking.com, Hotels.com, Airbnb).
+       - Exact GPS coordinates.
+       - A VERIFIED link to an official site, booking page, or Wikipedia page.
+       - Include 2-4 image URLs (use https://picsum.photos/seed/{random}/800/600).
+    4. Include start and end coordinates for that day's driving segment.
 
-    Viktig: Bruk din innebygde kunnskap om geografi og reisemål for å finne faktiske steder, ruter og koordinater.
-    Returner svaret som et JSON-objekt med følgende struktur:
+    Important: Use your built-in knowledge of geography and travel destinations to find real places, routes, and coordinates.
+    Return the response as a JSON object with the following structure:
     {
-      "summary": "En kort romantisk oppsummering av turen",
+      "summary": "A short romantic summary of the trip",
       "days": [
         {
           "day": 1,
-          "route": "Beskrivelse av ruten",
+          "route": "Route description",
           "startCoords": {"lat": 0, "lng": 0},
           "endCoords": {"lat": 0, "lng": 0},
           "pois": [{"name": "...", "description": "...", "whyForCouple": "...", "location": "...", "coordinates": {"lat": 0, "lng": 0}, "websiteUrl": "..."}],
           "accommodations": [{"name": "...", "images": ["url1", "url2"], "priceEstimate": "...", "description": "...", "whyRecommended": "...", "source": "...", "location": "...", "coordinates": {"lat": 0, "lng": 0}, "websiteUrl": "..."}]
         }
       ],
-      "googleMapsLink": "En samlet Google Maps-lenke for hele ruten"
+      "googleMapsLink": "A combined Google Maps link for the full route"
     }
   `;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
+  let lastError: any = null;
 
-    if (!response.text) {
-      throw new Error("Modellen returnerte ikke noe tekst. Prøv igjen.");
+  for (let i = 0; i < aiClients.length; i++) {
+    const ai = aiClients[i];
+    try {
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+        },
+      });
+
+      if (!response.text) {
+        throw new Error("The model did not return any text. Please try again.");
+      }
+
+      // Extract JSON from potential markdown blocks
+      const text = response.text;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : text;
+
+      return JSON.parse(jsonStr);
+    } catch (e: any) {
+      lastError = e;
+      const message = String(e?.message || "");
+      const isLikelyAuthFailure =
+        message.includes("API_KEY_INVALID") ||
+        message.includes("PERMISSION_DENIED") ||
+        message.includes("401") ||
+        message.includes("403");
+
+      const hasNextClient = i < aiClients.length - 1;
+      if (isLikelyAuthFailure && hasNextClient) {
+        continue;
+      }
+      break;
     }
-
-    // Extract JSON from potential markdown blocks
-    const text = response.text;
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    const jsonStr = jsonMatch ? jsonMatch[0] : text;
-
-    return JSON.parse(jsonStr);
-  } catch (e: any) {
-    console.error("Gemini API Error:", e);
-    if (e.message?.includes("API_KEY_INVALID")) {
-      throw new Error("Ugyldig API-nøkkel. Vennligst sjekk GEMINI_API i Secrets-panelet.");
-    }
-    throw new Error(`Kunne ikke generere reiseplanen: ${e.message || "Ukjent feil"}`);
   }
+
+  console.error("Gemini API Error:", lastError);
+  if (String(lastError?.message || "").includes("API_KEY_INVALID")) {
+    throw new Error("All configured Gemini keys failed. Please verify VITE_GEMINI_API_KEY_1, _2, and _3.");
+  }
+
+  throw new Error(`Could not generate the trip plan: ${lastError?.message || "Unknown error"}`);
 }

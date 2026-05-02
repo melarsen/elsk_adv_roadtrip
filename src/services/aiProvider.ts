@@ -10,31 +10,78 @@ declare global {
 }
 
 export const getAIClient = () => {
-  // 1. Sjekk AI Studio bruker-nøkkel (valgt i dialog)
-  // 2. Sjekk AI Studio system-nøkkel
-  // 3. Sjekk standard Vite miljøvariabel (for Vercel/GitHub)
+  // 1. Check AI Studio user key (selected in dialog)
+  // 2. Check AI Studio system key
+  // 3. Check prioritized Vite environment variables (for Vercel/GitHub)
   const apiKey = 
     process.env.API_KEY || 
     process.env.GEMINI_API_KEY || 
-    (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY);
+    (import.meta.env && (
+      import.meta.env.VITE_GEMINI_API_KEY_1 ||
+      import.meta.env.VITE_GEMINI_API_KEY_2 ||
+      import.meta.env.VITE_GEMINI_API_KEY_3 ||
+      import.meta.env.VITE_GEMINI_API_KEY
+    ));
   
   if (!apiKey || apiKey === "AI Studio Free Tier") {
-    throw new Error("API-nøkkel mangler. Vennligst sett VITE_GEMINI_API_KEY i Vercel eller velg en nøkkel i AI Studio.");
+    throw new Error("API key is missing. Please set VITE_GEMINI_API_KEY_1 (or _2/_3) in Vercel or choose a key in AI Studio.");
   }
   
   return new GoogleGenAI({ apiKey });
 };
 
+export const getAIClientsWithFallback = () => {
+  const clients: GoogleGenAI[] = [];
+  const envKeys = [
+    import.meta.env?.VITE_GEMINI_API_KEY_1,
+    import.meta.env?.VITE_GEMINI_API_KEY_2,
+    import.meta.env?.VITE_GEMINI_API_KEY_3,
+    import.meta.env?.VITE_GEMINI_API_KEY,
+  ].filter((k): k is string => !!k && k !== "AI Studio Free Tier");
+
+  // Keep order deterministic and avoid creating duplicate clients for repeated keys.
+  const uniqueKeys = Array.from(new Set(envKeys));
+  uniqueKeys.forEach((apiKey) => {
+    clients.push(new GoogleGenAI({ apiKey }));
+  });
+
+  // Preserve legacy behavior as final fallback for AI Studio/system key setups.
+  try {
+    clients.push(getAIClient());
+  } catch {
+    // Ignore; missing key is handled by caller if no client succeeds.
+  }
+
+  return clients;
+};
+
 export const isUserKeySelected = (): boolean => {
-  return !!(process.env.API_KEY || (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY));
+  return !!(
+    process.env.API_KEY ||
+    (import.meta.env && (
+      import.meta.env.VITE_GEMINI_API_KEY_1 ||
+      import.meta.env.VITE_GEMINI_API_KEY_2 ||
+      import.meta.env.VITE_GEMINI_API_KEY_3 ||
+      import.meta.env.VITE_GEMINI_API_KEY
+    ))
+  );
 };
 
 export const hasActiveApiKey = async (): Promise<boolean> => {
-  // Sjekk om vi har en nøkkel fra miljøvariabler (Vercel eller AI Studio)
+  // Check whether we have a key from environment variables (Vercel or AI Studio)
   if (process.env.API_KEY) return true;
-  if (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) return true;
+  if (
+    import.meta.env && (
+      import.meta.env.VITE_GEMINI_API_KEY_1 ||
+      import.meta.env.VITE_GEMINI_API_KEY_2 ||
+      import.meta.env.VITE_GEMINI_API_KEY_3 ||
+      import.meta.env.VITE_GEMINI_API_KEY
+    )
+  ) {
+    return true;
+  }
 
-  // Sjekk systemnøkkelen i AI Studio
+  // Check system key in AI Studio
   const systemKey = process.env.GEMINI_API_KEY;
   if (systemKey && systemKey !== "AI Studio Free Tier") {
     if (window.aistudio) {
@@ -55,6 +102,6 @@ export const openApiKeySelector = async () => {
   if (window.aistudio) {
     await window.aistudio.openSelectKey();
   } else {
-    alert("API-nøkkelvelgeren er ikke tilgjengelig i dette miljøet.");
+    alert("The API key selector is not available in this environment.");
   }
 };

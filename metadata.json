@@ -1,5 +1,5 @@
 {
   "name": "ELSK Roadtrip",
-  "description": "Planlegg den perfekte bilturen for deg og din kjære med personlige ruter, overnattinger og severdigheter.",
+  "description": "Plan the perfect road trip for you and your loved one with personalized routes, accommodations, and attractions.",
   "requestFramePermissions": ["geolocation"]
 }

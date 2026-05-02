@@ -7,6 +7,7 @@ export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
     plugins: [react(), tailwindcss()],
+    publicDir: 'images',
     define: {
       'process.env.GEMINI_API': JSON.stringify(env.GEMINI_API),
     },

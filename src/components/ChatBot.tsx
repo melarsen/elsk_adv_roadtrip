@@ -30,7 +30,7 @@ export default function ChatBot({ plan }: ChatBotProps) {
   const handleSend = async () => {
     if (!input.trim() || loading) return;
 
-    // Sjekk nøkkel før sending
+    // Check key before sending.
     const active = await hasActiveApiKey();
     if (!active) {
       await openApiKeySelector();
@@ -47,10 +47,10 @@ export default function ChatBot({ plan }: ChatBotProps) {
       const chat = ai.chats.create({
         model: "gemini-flash-latest",
         config: {
-          systemInstruction: `Du er en reiseassistent for appen "ELSK Roadtrip". 
-          Brukeren har akkurat generert en reiseplan: ${JSON.stringify(plan)}.
-          Svar på spørsmål om denne planen, gi mer informasjon om severdighetene (POI), foreslå lignende steder, eller hjelp med logistikk.
-          Vær romantisk, hjelpsom og engasjerende. Svar på norsk.`,
+          systemInstruction: `You are a travel assistant for the app "ELSK Roadtrip".
+          The user has just generated a trip plan: ${JSON.stringify(plan)}.
+          Answer questions about this plan, provide more details about attractions (POIs), suggest similar places, or help with logistics.
+          Be romantic, helpful, and engaging. Reply in English.`,
         },
       });
 
@@ -63,10 +63,10 @@ export default function ChatBot({ plan }: ChatBotProps) {
         message: userMessage,
       });
 
-      setMessages(prev => [...prev, { role: 'model', text: response.text || "Beklager, jeg kunne ikke svare på det." }]);
+      setMessages(prev => [...prev, { role: 'model', text: response.text || "Sorry, I couldn't answer that." }]);
     } catch (error) {
       console.error("Chat error:", error);
-      setMessages(prev => [...prev, { role: 'model', text: "Beklager, det oppstod en feil i chatten." }]);
+      setMessages(prev => [...prev, { role: 'model', text: "Sorry, an error occurred in the chat." }]);
     } finally {
       setLoading(false);
     }
@@ -95,7 +95,7 @@ export default function ChatBot({ plan }: ChatBotProps) {
             <div className="bg-romantic-600 p-4 text-white flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <Bot size={20} />
-                <span className="font-serif font-medium">Reiseassistent</span>
+                <span className="font-serif font-medium">Travel Assistant</span>
               </div>
               <button onClick={() => setIsOpen(false)} className="hover:bg-white/20 p-1 rounded-full">
                 <X size={20} />
@@ -107,7 +107,7 @@ export default function ChatBot({ plan }: ChatBotProps) {
               {messages.length === 0 && (
                 <div className="text-center text-slate-400 mt-10">
                   <Bot size={40} className="mx-auto mb-2 opacity-20" />
-                  <p className="text-sm">Spør meg om reiseplanen din!</p>
+                  <p className="text-sm">Ask me about your trip plan!</p>
                 </div>
               )}
               {messages.map((msg, i) => (
@@ -145,7 +145,7 @@ export default function ChatBot({ plan }: ChatBotProps) {
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Skriv en melding..."
+                  placeholder="Type a message..."
                   className="flex-1 bg-slate-100 border-none rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-romantic-500"
                   value={input}
                   onChange={e => setInput(e.target.value)}

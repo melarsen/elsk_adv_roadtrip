@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 900" width="1920" height="900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <!-- Sky gradient: night → twilight → sunset -->
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#101A36"/>
+      <stop offset="25%" stop-color="#2A1B4A"/>
+      <stop offset="55%" stop-color="#5C2A6E"/>
+      <stop offset="78%" stop-color="#FF6B6B"/>
+      <stop offset="92%" stop-color="#FFA62B"/>
+      <stop offset="100%" stop-color="#FFD93D"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#FFF6E5"/>
+      <stop offset="35%" stop-color="#FFD93D"/>
+      <stop offset="100%" stop-color="#FFA62B" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="sunGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#FFD93D" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#FFD93D" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mtFar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7A3870"/>
+      <stop offset="100%" stop-color="#3D2C5C"/>
+    </linearGradient>
+    <linearGradient id="mtMid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#532A6A"/>
+      <stop offset="100%" stop-color="#1F1535"/>
+    </linearGradient>
+    <linearGradient id="mtNear" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#231432"/>
+      <stop offset="100%" stop-color="#0A0712"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1A0E2A"/>
+      <stop offset="100%" stop-color="#050208"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFD08A"/>
+      <stop offset="100%" stop-color="#3A2418"/>
+    </linearGradient>
+    <linearGradient id="darken" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="60%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.55"/>
+    </linearGradient>
+    <linearGradient id="vignette" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#000" stop-opacity="0.35"/>
+      <stop offset="35%" stop-color="#000" stop-opacity="0.0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="1920" height="900" fill="url(#sky)"/>
+
+  <!-- Stars (only top portion) -->
+  <g fill="#FFF6E5">
+    <circle cx="120" cy="60" r="1.5" opacity="0.8"/>
+    <circle cx="240" cy="40" r="2" opacity="0.9"/>
+    <circle cx="360" cy="120" r="1" opacity="0.7"/>
+    <circle cx="500" cy="80" r="2.2" opacity="0.95"/>
+    <circle cx="640" cy="50" r="1.5" opacity="0.85"/>
+    <circle cx="800" cy="110" r="2" opacity="0.8"/>
+    <circle cx="940" cy="60" r="1" opacity="0.7"/>
+    <circle cx="1080" cy="130" r="2.4" opacity="0.95"/>
+    <circle cx="1240" cy="80" r="1.5" opacity="0.8"/>
+    <circle cx="1380" cy="40" r="2" opacity="0.9"/>
+    <circle cx="1520" cy="100" r="1" opacity="0.7"/>
+    <circle cx="1680" cy="60" r="2.2" opacity="0.9"/>
+    <circle cx="1820" cy="130" r="1.5" opacity="0.8"/>
+    <circle cx="180" cy="200" r="1" opacity="0.6"/>
+    <circle cx="1100" cy="220" r="1" opacity="0.6"/>
+    <circle cx="1700" cy="240" r="1" opacity="0.6"/>
+    <circle cx="60" cy="300" r="1" opacity="0.5"/>
+    <circle cx="900" cy="280" r="1" opacity="0.5"/>
+  </g>
+
+  <!-- Sun glow + sun (offset right of road's vanishing point) -->
+  <circle cx="1320" cy="540" r="320" fill="url(#sunGlow)"/>
+  <circle cx="1320" cy="540" r="130" fill="url(#sun)"/>
+  <circle cx="1320" cy="540" r="90" fill="#FFE89A" opacity="0.9"/>
+
+  <!-- Far mountain layer -->
+  <path d="M0,540 L120,460 L240,520 L360,440 L500,510 L640,420 L800,500 L960,400 L1120,500 L1280,420 L1440,510 L1580,450 L1720,520 L1860,440 L1920,490 L1920,720 L0,720 Z" fill="url(#mtFar)" opacity="0.95"/>
+  <!-- Snow caps far -->
+  <g fill="#FFF6E5" opacity="0.85">
+    <path d="M360,460 L375,440 L390,460 L380,470 Z"/>
+    <path d="M640,440 L655,420 L670,440 L660,450 Z"/>
+    <path d="M960,420 L980,400 L1000,420 L985,432 Z"/>
+    <path d="M1280,440 L1295,420 L1310,440 L1300,450 Z"/>
+    <path d="M1580,470 L1595,450 L1610,470 L1600,480 Z"/>
+  </g>
+
+  <!-- Mid mountain layer -->
+  <path d="M0,620 L100,540 L220,600 L360,520 L520,600 L680,510 L860,610 L1040,500 L1220,610 L1380,520 L1560,610 L1720,540 L1860,610 L1920,580 L1920,800 L0,800 Z" fill="url(#mtMid)"/>
+
+  <!-- Near foreground hills -->
+  <path d="M0,720 C200,640 400,720 620,680 C840,640 1080,740 1320,700 C1560,660 1780,740 1920,700 L1920,900 L0,900 Z" fill="url(#mtNear)"/>
+
+  <!-- Ground -->
+  <rect x="0" y="780" width="1920" height="120" fill="url(#ground)"/>
+
+  <!-- Road shoulders (wider trapezoid behind the road) -->
+  <path d="M945,610 L975,610 L1240,900 L680,900 Z" fill="#1A1018"/>
+  <!-- Road surface (paved trapezoid converging to vanishing point) -->
+  <path d="M955,610 L965,610 L1180,900 L740,900 Z" fill="url(#road)"/>
+  <!-- Lane edges -->
+  <path d="M955,610 L740,900" stroke="#FFE3B3" stroke-width="2" opacity="0.45" fill="none"/>
+  <path d="M965,610 L1180,900" stroke="#FFE3B3" stroke-width="2" opacity="0.45" fill="none"/>
+  <!-- Road centerline dashes (perspective) -->
+  <g stroke="#FFD93D" stroke-linecap="round" fill="none">
+    <line x1="960" y1="630" x2="960" y2="642" stroke-width="2"/>
+    <line x1="960" y1="668" x2="960" y2="685" stroke-width="3"/>
+    <line x1="960" y1="715" x2="960" y2="738" stroke-width="4"/>
+    <line x1="960" y1="772" x2="960" y2="800" stroke-width="5"/>
+    <line x1="960" y1="838" x2="960" y2="876" stroke-width="6"/>
+  </g>
+
+  <!-- Pine trees foreground left -->
+  <g fill="#050208">
+    <polygon points="60,760 100,830 20,830"/>
+    <polygon points="60,800 110,880 10,880"/>
+    <rect x="52" y="880" width="16" height="20"/>
+    <polygon points="180,780 215,840 145,840"/>
+    <polygon points="180,815 220,885 140,885"/>
+    <rect x="173" y="885" width="14" height="15"/>
+    <polygon points="300,790 325,840 275,840"/>
+    <polygon points="300,820 330,880 270,880"/>
+    <rect x="294" y="880" width="12" height="20"/>
+  </g>
+  <!-- Pine trees foreground right -->
+  <g fill="#050208">
+    <polygon points="1860,760 1900,830 1820,830"/>
+    <polygon points="1860,800 1910,880 1810,880"/>
+    <rect x="1852" y="880" width="16" height="20"/>
+    <polygon points="1740,780 1775,840 1705,840"/>
+    <polygon points="1740,815 1780,885 1700,885"/>
+    <rect x="1733" y="885" width="14" height="15"/>
+    <polygon points="1620,790 1645,840 1595,840"/>
+    <polygon points="1620,820 1650,880 1590,880"/>
+    <rect x="1614" y="880" width="12" height="20"/>
+  </g>
+
+  <!-- Birds in mid sky -->
+  <g stroke="#1B1B2F" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.65">
+    <path d="M520,300 q12,-12 24,0 q12,-12 24,0"/>
+    <path d="M620,260 q9,-9 18,0 q9,-9 18,0"/>
+    <path d="M1380,280 q12,-12 24,0 q12,-12 24,0"/>
+    <path d="M1280,320 q9,-9 18,0 q9,-9 18,0"/>
+  </g>
+
+  <!-- Soft top vignette to help title overlay readability -->
+  <rect width="1920" height="900" fill="url(#vignette)"/>
+  <!-- Bottom darken for any future controls -->
+  <rect width="1920" height="900" fill="url(#darken)"/>
+</svg>
