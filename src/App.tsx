@@ -713,7 +713,7 @@ export default function App() {
                         </h4>
                         <div className="space-y-6">
                           {day.accommodations.map((acc: any, i: number) => (
-                            <div key={i} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                            <div key={i} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
                               <div className="grid grid-cols-2 gap-1 h-40 bg-slate-100">
                                 {acc.images?.slice(0, 2).map((img: string, imgIdx: number) => (
                                   <img 
@@ -725,11 +725,11 @@ export default function App() {
                                   />
                                 ))}
                               </div>
-                              <div className="p-6 pt-5 bg-white border-t border-slate-100">
+                              <div className="relative z-10 p-6 pt-6 bg-white border-t border-slate-100">
                                 <div className="flex justify-between items-start gap-4 mb-4">
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-2">
-                                      <h5 className="font-bold text-lg text-slate-800 leading-tight break-words">{acc.name}</h5>
+                                      <h5 className="m-0 font-bold text-lg text-slate-800 leading-tight break-words">{acc.name}</h5>
                                       {acc.websiteUrl && (
                                         <a 
                                           href={acc.websiteUrl} 
@@ -747,7 +747,7 @@ export default function App() {
                                     </p>
                                   </div>
                                   <div className="text-right shrink-0">
-                                    <p className="text-romantic-700 font-bold text-sm">{acc.priceEstimate}</p>
+                                    <p className="m-0 text-romantic-700 font-bold text-sm">{acc.priceEstimate}</p>
                                   </div>
                                 </div>
                                 <p className="text-slate-600 text-xs mb-4 line-clamp-2">{acc.description}</p>
