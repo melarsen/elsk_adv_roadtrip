@@ -1,6 +1,4 @@
-# App
-
-## ELSK Roadtrip – Smart planning, unforgettable detours
+# ELSK Roadtrip – Smart planning, unforgettable detours
 
 _**“We map the route, you make the stories.”**_
 
@@ -9,11 +7,12 @@ Build the perfect route, find hidden gems and hit the open road with someone you
 
 ELSK Roadtrip helps couples plan scenic drives, cozy stays, and playful detours, so you can focus on each other instead of the map.
 
----
-
-Deployed at: https://elsk-adv-roadtrip.vercel.app/
-
 
 ---
 
+Check out the app at: **https://elsk-adv-roadtrip.vercel.app/**
+
+---
+
+[![Poster ELSK Roadtrip](images/Poster-ELSK-Roadtrip-01.png)](https://elsk-adv-roadtrip.vercel.app/)
 
