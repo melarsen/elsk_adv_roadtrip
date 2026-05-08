@@ -492,25 +492,45 @@ export default function App() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <figure className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3">
-                <img
-                  src="/Poster-ELSK-Roadtrip-01.png"
-                  alt="ELSK Roadtrip poster"
-                  className="w-full h-auto rounded-xl"
-                />
+                <a href="/Poster-ELSK-Roadtrip-01.png" target="_blank" rel="noopener noreferrer">
+                  <img
+                    src="/Poster-ELSK-Roadtrip-01.png"
+                    alt="ELSK Roadtrip poster"
+                    className="w-full h-auto rounded-xl"
+                  />
+                </a>
                 <figcaption className="text-sm text-slate-500">
                   Poster: <span className="font-medium text-slate-700">images/Poster-ELSK-Roadtrip-01.png</span>
                 </figcaption>
+                <a
+                  href="/Poster-ELSK-Roadtrip-01.png"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-romantic-600 hover:text-romantic-700 font-medium underline underline-offset-4"
+                >
+                  Open fullscreen <ExternalLink size={14} />
+                </a>
               </figure>
 
               <figure className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3">
-                <img
-                  src="/infographics.png"
-                  alt="ELSK Roadtrip infographics"
-                  className="w-full h-auto rounded-xl"
-                />
+                <a href="/infographics.png" target="_blank" rel="noopener noreferrer">
+                  <img
+                    src="/infographics.png"
+                    alt="ELSK Roadtrip infographics"
+                    className="w-full h-auto rounded-xl"
+                  />
+                </a>
                 <figcaption className="text-sm text-slate-500">
                   Infographics: <span className="font-medium text-slate-700">images/infographics.png</span>
                 </figcaption>
+                <a
+                  href="/infographics.png"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-romantic-600 hover:text-romantic-700 font-medium underline underline-offset-4"
+                >
+                  Open fullscreen <ExternalLink size={14} />
+                </a>
               </figure>
             </div>
           </section>

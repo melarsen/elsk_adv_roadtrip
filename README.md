@@ -18,5 +18,9 @@ About page: **https://elsk-adv-roadtrip.vercel.app/about**
 
 [![Poster ELSK Roadtrip](images/Poster-ELSK-Roadtrip-01.png)](https://elsk-adv-roadtrip.vercel.app/)
 
+[Open poster fullscreen](https://elsk-adv-roadtrip.vercel.app/Poster-ELSK-Roadtrip-01.png)
+
 ![ELSK Roadtrip Infographics](images/infographics.png)
+
+[Open infographics fullscreen](https://elsk-adv-roadtrip.vercel.app/infographics.png)
 
