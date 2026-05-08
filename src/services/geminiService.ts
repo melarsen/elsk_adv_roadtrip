@@ -596,7 +596,7 @@ async function enrichTripPlanHotelImages(plan: TripPlan): Promise<TripPlan> {
 export async function generateTripPlan(req: TripRequest): Promise<TripPlan> {
   const aiClients = getAIClientsWithFallback();
   if (aiClients.length === 0) {
-    throw new Error("API key is missing. Please set VITE_GEMINI_API_KEY_1 (or _2/_3).");
+    throw new Error("API key is missing. Please set VITE_GEMINI_API_KEY_1 (or _2/_3/_4/_5).");
   }
   
   // Use gemini-flash-latest for broad compatibility with free-tier keys.
@@ -693,7 +693,7 @@ export async function generateTripPlan(req: TripRequest): Promise<TripPlan> {
 
   console.error("Gemini API Error:", lastError);
   if (String(lastError?.message || "").includes("API_KEY_INVALID")) {
-    throw new Error("All configured Gemini keys failed. Please verify VITE_GEMINI_API_KEY_1, _2, and _3.");
+    throw new Error("All configured Gemini keys failed. Please verify VITE_GEMINI_API_KEY_1, _2, _3, _4, and _5.");
   }
 
   throw new Error(`Could not generate the trip plan: ${lastError?.message || "Unknown error"}`);

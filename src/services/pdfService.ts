@@ -247,15 +247,18 @@ export async function buildTripPlanPdf(plan: TripPlan, request: TripRequest): Pr
     y += LINE_HEIGHT;
 
     doc.setFont('helvetica', 'normal');
-    day.pois.forEach((poi, index) => {
+    for (const [index, poi] of day.pois.entries()) {
       y = writeWrappedText(doc, `${index + 1}. ${poi.name}${poi.location ? ` - ${poi.location}` : ''}`, y);
+      if (poi.imageUrl) {
+        y = await writeImageRow(doc, [poi.imageUrl], y);
+      }
       y = writeWrappedText(doc, poi.description, y, { indent: 4, color: [82, 82, 91] });
       y = writeWrappedText(doc, `Why it fits: ${poi.whyForCouple}`, y, { indent: 4, color: [82, 82, 91] });
       if (poi.websiteUrl) {
         y = writeLink(doc, `Attraction link: ${poi.name}`, poi.websiteUrl, y, 4);
       }
       y += 2;
-    });
+    }
 
     doc.setFont('helvetica', 'bold');
     y = ensurePageSpace(doc, y, LINE_HEIGHT * 2);
@@ -272,7 +275,6 @@ export async function buildTripPlanPdf(plan: TripPlan, request: TripRequest): Pr
       if (accommodation.priceEstimate) {
         y = writeWrappedText(doc, accommodation.priceEstimate, y, { indent: 4, color: [148, 163, 184] });
       }
-      y = await writeImageRow(doc, accommodation.images.slice(0, 2), y);
       y = writeWrappedText(doc, accommodation.description, y, { indent: 4, color: [82, 82, 91] });
       y = writeWrappedText(doc, `Why it fits: ${accommodation.whyRecommended}`, y, { indent: 4, color: [82, 82, 91] });
       y = writeLink(doc, `Search: ${accommodation.name}`, `https://www.google.com/search?q=${encodeURIComponent(accommodation.name || '')}`, y, 4);

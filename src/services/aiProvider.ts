@@ -20,11 +20,13 @@ export const getAIClient = () => {
       import.meta.env.VITE_GEMINI_API_KEY_1 ||
       import.meta.env.VITE_GEMINI_API_KEY_2 ||
       import.meta.env.VITE_GEMINI_API_KEY_3 ||
+      import.meta.env.VITE_GEMINI_API_KEY_4 ||
+      import.meta.env.VITE_GEMINI_API_KEY_5 ||
       import.meta.env.VITE_GEMINI_API_KEY
     ));
   
   if (!apiKey || apiKey === "AI Studio Free Tier") {
-    throw new Error("API key is missing. Please set VITE_GEMINI_API_KEY_1 (or _2/_3) in Vercel or choose a key in AI Studio.");
+    throw new Error("API key is missing. Please set VITE_GEMINI_API_KEY_1 (or _2/_3/_4/_5) in Vercel or choose a key in AI Studio.");
   }
   
   return new GoogleGenAI({ apiKey });
@@ -36,6 +38,8 @@ export const getAIClientsWithFallback = () => {
     import.meta.env?.VITE_GEMINI_API_KEY_1,
     import.meta.env?.VITE_GEMINI_API_KEY_2,
     import.meta.env?.VITE_GEMINI_API_KEY_3,
+    import.meta.env?.VITE_GEMINI_API_KEY_4,
+    import.meta.env?.VITE_GEMINI_API_KEY_5,
     import.meta.env?.VITE_GEMINI_API_KEY,
   ].filter((k): k is string => !!k && k !== "AI Studio Free Tier");
 
@@ -62,6 +66,8 @@ export const isUserKeySelected = (): boolean => {
       import.meta.env.VITE_GEMINI_API_KEY_1 ||
       import.meta.env.VITE_GEMINI_API_KEY_2 ||
       import.meta.env.VITE_GEMINI_API_KEY_3 ||
+      import.meta.env.VITE_GEMINI_API_KEY_4 ||
+      import.meta.env.VITE_GEMINI_API_KEY_5 ||
       import.meta.env.VITE_GEMINI_API_KEY
     ))
   );
@@ -75,6 +81,8 @@ export const hasActiveApiKey = async (): Promise<boolean> => {
       import.meta.env.VITE_GEMINI_API_KEY_1 ||
       import.meta.env.VITE_GEMINI_API_KEY_2 ||
       import.meta.env.VITE_GEMINI_API_KEY_3 ||
+      import.meta.env.VITE_GEMINI_API_KEY_4 ||
+      import.meta.env.VITE_GEMINI_API_KEY_5 ||
       import.meta.env.VITE_GEMINI_API_KEY
     )
   ) {
