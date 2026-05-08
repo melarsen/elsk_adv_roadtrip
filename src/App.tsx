@@ -255,6 +255,13 @@ export default function App() {
   };
 
   const isAdminRoute = routePath === '/admin';
+  const isAboutRoute = routePath === '/about';
+
+  const navigateTo = (path: string) => {
+    window.history.pushState({}, '', path);
+    setRoutePath(path);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="min-h-screen pb-20">
@@ -323,7 +330,7 @@ export default function App() {
           >
             Build the perfect route, find hidden gems and hit the open road with someone you love.
           </motion.p>
-          {!isAdminRoute && (
+          {!isAdminRoute && !isAboutRoute && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -465,6 +472,47 @@ export default function App() {
                 )}
               </>
             )}
+          </section>
+        ) : isAboutRoute ? (
+          <section className="glass-card p-8 mb-12 space-y-8">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h2 className="text-3xl font-serif text-slate-800">About ELSK Roadtrip</h2>
+              <button
+                onClick={() => navigateTo('/')}
+                className="text-slate-500 hover:text-slate-700 text-sm underline underline-offset-4"
+              >
+                Back to front page
+              </button>
+            </div>
+
+            <p className="text-slate-600 leading-relaxed max-w-3xl">
+              ELSK Roadtrip helps couples create memorable journeys with scenic routes, meaningful detours,
+              and practical planning support in one place.
+            </p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <figure className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3">
+                <img
+                  src="/Poster-ELSK-Roadtrip-01.png"
+                  alt="ELSK Roadtrip poster"
+                  className="w-full h-auto rounded-xl"
+                />
+                <figcaption className="text-sm text-slate-500">
+                  Poster: <span className="font-medium text-slate-700">images/Poster-ELSK-Roadtrip-01.png</span>
+                </figcaption>
+              </figure>
+
+              <figure className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3">
+                <img
+                  src="/infographics.png"
+                  alt="ELSK Roadtrip infographics"
+                  className="w-full h-auto rounded-xl"
+                />
+                <figcaption className="text-sm text-slate-500">
+                  Infographics: <span className="font-medium text-slate-700">images/infographics.png</span>
+                </figcaption>
+              </figure>
+            </div>
           </section>
         ) : (
           <>
@@ -882,6 +930,12 @@ export default function App() {
             &copy; 2026 ELSK Adventures. All rights reserved.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
+            <button
+              onClick={() => navigateTo(isAboutRoute ? '/' : '/about')}
+              className="text-slate-400 hover:text-romantic-500 text-xs flex items-center gap-1 transition-colors"
+            >
+              <ExternalLink size={12} /> {isAboutRoute ? 'Front page' : 'About'}
+            </button>
             <button 
               onClick={handleSelectKey}
               className="text-slate-400 hover:text-romantic-500 text-xs flex items-center gap-1 transition-colors"

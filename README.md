@@ -12,7 +12,11 @@ ELSK Roadtrip helps couples plan scenic drives, cozy stays, and playful detours,
 
 Check out the app at: **https://elsk-adv-roadtrip.vercel.app/**
 
+About page: **https://elsk-adv-roadtrip.vercel.app/about**
+
 ---
 
 [![Poster ELSK Roadtrip](images/Poster-ELSK-Roadtrip-01.png)](https://elsk-adv-roadtrip.vercel.app/)
+
+![ELSK Roadtrip Infographics](images/infographics.png)
 
