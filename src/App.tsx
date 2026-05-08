@@ -4,9 +4,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Clock, Heart, Users, Search, Navigation, Hotel, Camera, ExternalLink, Loader2, ChevronRight, ChevronDown, Map as MapIcon, Mail, FileText, X } from 'lucide-react';
+import { MapPin, Clock, Heart, Users, Search, Navigation, Hotel, Camera, ExternalLink, Loader2, ChevronRight, ChevronDown, Map as MapIcon, Mail, FileText, X, BedDouble, CalendarCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { generateTripPlan, TripPlan, TripRequest } from './services/geminiService';
+import { Accommodation, generateTripPlan, TripPlan, TripRequest } from './services/geminiService';
 import { hasActiveApiKey, openApiKeySelector, isUserKeySelected } from './services/aiProvider';
 import { buildTripPlanPdf, triggerPdfDownload } from './services/pdfService';
 import { uploadTripPdfToSupabase } from './services/supabaseStorage';
@@ -138,6 +138,75 @@ export default function App() {
     const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
 
     return !(isMobileUserAgent || isTouchDevice);
+  };
+
+  const getMainHotelWebsiteUrl = (acc: any) => acc.officialWebsiteUrl || acc.websiteUrl;
+
+  const splitHotelNameWords = (name?: string) =>
+    (name || '')
+      .split(/[^A-Za-z0-9]+/)
+      .map((word) => word.trim())
+      .filter((word) => word.length > 0);
+
+  const getTwoLongestHotelWords = (name?: string) =>
+    [...splitHotelNameWords(name)]
+      .sort((a, b) => b.length - a.length)
+      .slice(0, 2);
+
+  const extractCityCountry = (location?: string) => {
+    const parts = (location || '')
+      .split(',')
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0);
+
+    if (parts.length === 0) {
+      return { city: '', country: '' };
+    }
+
+    const city = parts.length > 1 ? parts[parts.length - 2] : parts[0];
+    const country = parts.length > 1 ? parts[parts.length - 1] : '';
+    return { city, country };
+  };
+
+  const buildHotelSearchQuery = (acc: any) => {
+    const { city, country } = extractCityCountry(acc?.location);
+    const longestWords = getTwoLongestHotelWords(acc?.name);
+    return [city, country, ...longestWords].filter((part) => part && part.trim().length > 0).join(' ').trim();
+  };
+
+  const getBookingSearchUrl = (acc: any) => {
+    const query = buildHotelSearchQuery(acc);
+    if (!query) {
+      return acc?.bookingComUrl;
+    }
+
+    return `https://www.booking.com/search.html?ss=${encodeURIComponent(query)}`;
+  };
+
+  const getHotelsSearchUrl = (acc: any) => {
+    const query = buildHotelSearchQuery(acc);
+    if (!query) {
+      return acc?.hotelsComUrl;
+    }
+
+    const params = new URLSearchParams({
+      destination: query,
+      adults: '2',
+      rooms: '1',
+      sort: 'RECOMMENDED',
+    });
+    return `https://www.hotels.com/Hotel-Search?${params.toString()}`;
+  };
+
+  const formatPriceEstimate = (rawPrice: string) => {
+    const safePrice = (rawPrice || '').trim();
+    if (!safePrice) {
+      return 'estimated from ~NOK 1,200/night';
+    }
+
+    const normalized = safePrice.replace(/^estimated from\s*/i, '').replace(/^~/, '').trim();
+    const withPrefix = `estimated from ~${normalized}`;
+    return /\/night|per\s+night/i.test(withPrefix) ? withPrefix : `${withPrefix}/night`;
   };
 
   const persistGeneratedTrip = async (generatedPlan: TripPlan, request: TripRequest) => {
@@ -761,6 +830,19 @@ export default function App() {
                         <div className="space-y-4">
                           {day.pois.map((poi: any, i: number) => (
                             <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                              {poi.imageUrl && (
+                                <div className="mb-4">
+                                  <img
+                                    src={poi.imageUrl}
+                                    alt={poi.name}
+                                    className="w-full h-44 object-cover rounded-xl"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                  {poi.imageSource && (
+                                    <p className="mt-2 text-[11px] text-slate-500">Image source: {poi.imageSource}</p>
+                                  )}
+                                </div>
+                              )}
                               <div className="flex justify-between items-start mb-2">
                                 <h5 className="font-bold text-lg text-slate-800">{poi.name}</h5>
                                 {poi.websiteUrl && (
@@ -793,67 +875,84 @@ export default function App() {
                         <div className="space-y-6">
                           {day.accommodations.map((acc: any, i: number) => (
                             <div key={i} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
-                              <div className="grid grid-cols-2 gap-1 h-40 bg-slate-100">
-                                {acc.images?.slice(0, 2).map((img: string, imgIdx: number) => (
-                                  <img 
-                                    key={imgIdx} 
-                                    src={img} 
-                                    alt={acc.name} 
-                                    className="w-full h-full object-cover"
-                                    referrerPolicy="no-referrer"
-                                  />
-                                ))}
-                              </div>
-                              <div className="relative z-10 p-6 pt-6 bg-white border-t border-slate-100">
-                                <div className="flex justify-between items-start gap-4 mb-4">
-                                  <div className="min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <h5 className="m-0 font-bold text-lg text-slate-800 leading-tight break-words">{acc.name}</h5>
-                                      {acc.websiteUrl && (
-                                        <a 
-                                          href={acc.websiteUrl} 
-                                          target="_blank" 
-                                          rel="noopener noreferrer"
-                                          className="text-romantic-500 hover:text-romantic-600"
-                                          title="Visit website"
-                                        >
-                                          <ExternalLink size={14} />
-                                        </a>
-                                      )}
-                                    </div>
-                                    <p className="text-slate-500 text-xs flex items-center gap-1">
-                                      <MapPin size={10} /> {acc.location}
-                                    </p>
+                              <AccommodationImageGallery accommodation={acc} maxImages={2} heightClassName="h-40" />
+                              <div className={clsx('relative z-10 p-6 pt-6 bg-white', acc.images?.length > 0 && 'border-t border-slate-100')}>
+                                <div className="space-y-3">
+                                  <div className="flex items-start gap-2">
+                                    <h5 className="m-0 font-bold text-lg text-slate-800 leading-tight break-words flex-1">{acc.name}</h5>
+                                    <a
+                                        href={`https://www.google.com/search?q=${encodeURIComponent(acc.name || '')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-romantic-500 hover:text-romantic-600 shrink-0"
+                                        title="Search for hotel"
+                                      >
+                                        <ExternalLink size={14} />
+                                      </a>
                                   </div>
-                                  <div className="text-right shrink-0">
-                                    <p className="m-0 text-romantic-700 font-bold text-sm">{acc.priceEstimate}</p>
+
+                                  <p className="text-slate-500 text-xs flex items-center gap-1">
+                                    <MapPin size={10} /> {acc.location}
+                                  </p>
+
+                                  <p className="text-slate-600 text-xs leading-relaxed line-clamp-3">{acc.description}</p>
+
+                                  <div className="bg-romantic-50 p-3 rounded-xl">
+                                    <p className="text-romantic-700 text-xs italic">"{acc.whyRecommended}"</p>
                                   </div>
-                                </div>
-                                <p className="text-slate-600 text-xs mb-4 line-clamp-2">{acc.description}</p>
-                                <div className="bg-romantic-50 p-3 rounded-xl mb-4">
-                                  <p className="text-romantic-700 text-xs italic">"{acc.whyRecommended}"</p>
-                                </div>
-                                <div className="flex items-center justify-between text-[10px] text-slate-400">
-                                  <span>Source: {acc.source}</span>
-                                  {acc.websiteUrl ? (
-                                    <a 
-                                      href={acc.websiteUrl} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="text-romantic-600 font-semibold flex items-center gap-1 hover:underline"
-                                    >
-                                      Book now <ChevronRight size={12} />
-                                    </a>
-                                  ) : (
-                                    <button className="text-romantic-600 font-semibold flex items-center gap-1 opacity-50 cursor-not-allowed">
-                                      Book now <ChevronRight size={12} />
-                                    </button>
-                                  )}
+
+                                  <p className="text-slate-400 text-xs italic">{formatPriceEstimate(acc.priceEstimate)}</p>
+
+                                  <div className="border border-slate-200 rounded-xl p-3 flex flex-wrap items-center gap-3 text-xs bg-slate-50">
+                                    {getHotelsSearchUrl(acc) ? (
+                                      <a
+                                        href={getHotelsSearchUrl(acc)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-blue-600 font-semibold hover:underline"
+                                      >
+                                        <img src="https://www.google.com/s2/favicons?domain=hotels.com&sz=16" alt="" width={13} height={13} className="inline-block" /> Hotels.com
+                                      </a>
+                                    ) : null}
+                                    {getBookingSearchUrl(acc) ? (
+                                      <a
+                                        href={getBookingSearchUrl(acc)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-blue-600 font-semibold hover:underline"
+                                      >
+                                        <img src="https://www.google.com/s2/favicons?domain=booking.com&sz=16" alt="" width={13} height={13} className="inline-block" /> Booking.com
+                                      </a>
+                                    ) : null}
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           ))}
                         </div>
+                        {(() => {
+                          const firstAcc = day.accommodations?.[0];
+                          const { city, country } = extractCityCountry(firstAcc?.location);
+                          if (!city && !country) return null;
+                          const q = ['hotel', city, country].filter(Boolean).join(' ');
+                          return (
+                            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                              <div className="p-6 space-y-3">
+                                <h5 className="m-0 font-bold text-lg text-slate-800 leading-tight">More hotels?</h5>
+                                <div className="pt-2">
+                                <a
+                                  href={`https://www.google.com/search?q=${encodeURIComponent(q)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-xs text-blue-600 font-semibold hover:underline"
+                                >
+                                  <img src="https://www.google.com/s2/favicons?domain=google.com&sz=16" alt="" width={13} height={13} className="inline-block" /> Search other hotels in {[city, country].filter(Boolean).join(', ')}
+                                </a>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </section>
@@ -996,6 +1095,43 @@ export default function App() {
   );
 }
 
+function AccommodationImageGallery({
+  accommodation,
+  maxImages,
+  heightClassName,
+}: {
+  accommodation: Accommodation;
+  maxImages: number;
+  heightClassName: string;
+}) {
+  const images = accommodation.images?.slice(0, maxImages) ?? [];
+
+  if (images.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="relative">
+      <div className={clsx('grid gap-1 bg-slate-100', images.length === 1 ? 'grid-cols-1' : 'grid-cols-2', heightClassName)}>
+        {images.map((img, imgIdx) => (
+          <img
+            key={imgIdx}
+            src={img}
+            alt={accommodation.name}
+            className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        ))}
+      </div>
+      {accommodation.imageSource && (
+        <span className="absolute left-2 bottom-2 bg-black/65 text-white text-[10px] px-2 py-1 rounded-md">
+          {accommodation.imageSource}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function DayCard({ day }: { day: any }) {
   const [expanded, setExpanded] = useState(true);
 
@@ -1035,6 +1171,19 @@ function DayCard({ day }: { day: any }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {day.pois.map((poi: any, i: number) => (
                   <div key={i} className="bg-slate-50 p-6 rounded-2xl border border-slate-100 hover:border-romantic-200 transition-colors">
+                    {poi.imageUrl && (
+                      <div className="mb-4">
+                        <img
+                          src={poi.imageUrl}
+                          alt={poi.name}
+                          className="w-full h-40 object-cover rounded-xl"
+                          referrerPolicy="no-referrer"
+                        />
+                        {poi.imageSource && (
+                          <p className="mt-2 text-[11px] text-slate-500">Image source: {poi.imageSource}</p>
+                        )}
+                      </div>
+                    )}
                     <h5 className="font-bold text-lg text-slate-800 mb-2">{poi.name}</h5>
                     <p className="text-slate-600 text-sm mb-4">{poi.description}</p>
                     <div className="flex items-start gap-2 bg-romantic-50 p-3 rounded-xl">
@@ -1054,17 +1203,7 @@ function DayCard({ day }: { day: any }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {day.accommodations.map((acc: any, i: number) => (
                   <div key={i} className="flex flex-col bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden group">
-                    <div className="grid grid-cols-2 gap-1 h-48">
-                      {acc.images?.slice(0, 4).map((img: string, imgIdx: number) => (
-                        <img 
-                          key={imgIdx} 
-                          src={img} 
-                          alt={acc.name} 
-                          className="w-full h-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                      ))}
-                    </div>
+                    <AccommodationImageGallery accommodation={acc} maxImages={4} heightClassName="h-48" />
                     <div className="p-6 space-y-4">
                       <div className="flex justify-between items-start">
                         <div>
@@ -1078,7 +1217,6 @@ function DayCard({ day }: { day: any }) {
                           <p className="text-[10px] text-slate-400 uppercase tracking-wider">Price estimate</p>
                         </div>
                       </div>
-                      
                       <p className="text-slate-600 text-sm line-clamp-3">{acc.description}</p>
                       
                       <div className="space-y-2">

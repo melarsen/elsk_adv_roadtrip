@@ -1,4 +1,4 @@
-import { TripPlan, TripRequest } from './geminiService';
+import { TripPlan, TripRequest, extractCityAndCountry, buildBookingSearchUrl, buildHotelsSearchUrl } from './geminiService';
 
 type PdfDocument = import('jspdf').jsPDF;
 
@@ -266,17 +266,31 @@ export async function buildTripPlanPdf(plan: TripPlan, request: TripRequest): Pr
     for (const [index, accommodation] of day.accommodations.entries()) {
       y = writeWrappedText(
         doc,
-        `${index + 1}. ${accommodation.name}${accommodation.location ? ` - ${accommodation.location}` : ''}${accommodation.priceEstimate ? ` (${accommodation.priceEstimate})` : ''}`,
+        `${index + 1}. ${accommodation.name}${accommodation.location ? ` - ${accommodation.location}` : ''}`,
         y,
       );
+      if (accommodation.priceEstimate) {
+        y = writeWrappedText(doc, accommodation.priceEstimate, y, { indent: 4, color: [148, 163, 184] });
+      }
       y = await writeImageRow(doc, accommodation.images.slice(0, 2), y);
       y = writeWrappedText(doc, accommodation.description, y, { indent: 4, color: [82, 82, 91] });
       y = writeWrappedText(doc, `Why it fits: ${accommodation.whyRecommended}`, y, { indent: 4, color: [82, 82, 91] });
-      y = writeWrappedText(doc, `Source: ${accommodation.source}`, y, { indent: 4, color: [82, 82, 91] });
-      if (accommodation.websiteUrl) {
-        y = writeLink(doc, `Hotel link: ${accommodation.name}`, accommodation.websiteUrl, y, 4);
+      y = writeLink(doc, `Search: ${accommodation.name}`, `https://www.google.com/search?q=${encodeURIComponent(accommodation.name || '')}`, y, 4);
+      const bookingUrl = buildBookingSearchUrl(accommodation);
+      if (bookingUrl) {
+        y = writeLink(doc, 'Booking.com', bookingUrl, y, 4);
+      }
+      const hotelsUrl = buildHotelsSearchUrl(accommodation);
+      if (hotelsUrl) {
+        y = writeLink(doc, 'Hotels.com', hotelsUrl, y, 4);
       }
       y += 2;
+    }
+
+    const { city, country } = extractCityAndCountry(day.accommodations?.[0]?.location);
+    if (city || country) {
+      const q = ['hotel', city, country].filter(Boolean).join(' ');
+      y = writeLink(doc, `Search other hotels in ${[city, country].filter(Boolean).join(', ')}`, `https://www.google.com/search?q=${encodeURIComponent(q)}`, y, 0);
     }
 
     y += 4;
