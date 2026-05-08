@@ -1,4 +1,4 @@
-import { getAIClientsWithFallback } from "./aiProvider";
+import { getAIClientsWithFallback, setLastWorkingGeminiKeyLabel } from "./aiProvider";
 
 export interface TripRequest {
   start: string;
@@ -49,6 +49,49 @@ export interface TripPlan {
   summary: string;
   days: DayPlan[];
   googleMapsLink: string;
+}
+
+function isRetryableGeminiError(error: unknown) {
+  const message = String((error as { message?: string })?.message || '').toUpperCase();
+
+  return [
+    'API_KEY_INVALID',
+    'PERMISSION_DENIED',
+    '401',
+    '403',
+    '429',
+    'RESOURCE_EXHAUSTED',
+    'RATE_LIMIT',
+    'TOO_MANY_REQUESTS',
+    '500',
+    '502',
+    '503',
+    '504',
+    'INTERNAL',
+    'UNAVAILABLE',
+    'DEADLINE_EXCEEDED',
+    'TIMEOUT',
+    'TIMED OUT',
+    'ETIMEDOUT',
+    'ECONNRESET',
+    'ECONNREFUSED',
+    'NETWORK',
+    'FETCH FAILED',
+  ].some((token) => message.includes(token));
+}
+
+function extractGeminiResponseText(response: { text?: string | null; candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }) {
+  const directText = String(response?.text || '').trim();
+  if (directText) {
+    return directText;
+  }
+
+  return (response?.candidates || [])
+    .flatMap((candidate) => candidate?.content?.parts || [])
+    .map((part) => (typeof part?.text === 'string' ? part.text.trim() : ''))
+    .filter(Boolean)
+    .join(' ')
+    .trim();
 }
 
 const DISALLOWED_IMAGE_HOSTS = [
@@ -650,9 +693,10 @@ export async function generateTripPlan(req: TripRequest): Promise<TripPlan> {
   `;
 
   let lastError: any = null;
+  const errors: unknown[] = [];
 
   for (let i = 0; i < aiClients.length; i++) {
-    const ai = aiClients[i];
+    const { client: ai, sourceLabel } = aiClients[i];
     try {
       const response = await ai.models.generateContent({
         model: modelName,
@@ -662,39 +706,43 @@ export async function generateTripPlan(req: TripRequest): Promise<TripPlan> {
         },
       });
 
-      if (!response.text) {
+      const text = extractGeminiResponseText(response);
+      if (!text) {
         throw new Error("The model did not return any text. Please try again.");
       }
 
       // Extract JSON from potential markdown blocks
-      const text = response.text;
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       const jsonStr = jsonMatch ? jsonMatch[0] : text;
 
       const normalizedPlan = normalizeTripPlan(JSON.parse(jsonStr));
       const withPoiImages = await enrichTripPlanPoiImages(normalizedPlan);
+      setLastWorkingGeminiKeyLabel(sourceLabel);
       return enrichTripPlanHotelImages(withPoiImages);
     } catch (e: any) {
       lastError = e;
-      const message = String(e?.message || "");
-      const isLikelyAuthFailure =
-        message.includes("API_KEY_INVALID") ||
-        message.includes("PERMISSION_DENIED") ||
-        message.includes("401") ||
-        message.includes("403");
-
+      errors.push(e);
       const hasNextClient = i < aiClients.length - 1;
-      if (isLikelyAuthFailure && hasNextClient) {
+      if (hasNextClient) {
         continue;
       }
       break;
     }
   }
 
-  console.error("Gemini API Error:", lastError);
-  if (String(lastError?.message || "").includes("API_KEY_INVALID")) {
-    throw new Error("All configured Gemini keys failed. Please verify VITE_GEMINI_API_KEY_1, _2, _3, _4, and _5.");
+  console.error("Gemini API Error:", { lastError, errors });
+
+  const allErrors = errors.map((error) => String((error as { message?: string })?.message || error || ''));
+  const allKeysInvalid = allErrors.length > 0 && allErrors.every((message) => message.includes("API_KEY_INVALID"));
+  const allKeysQuotaExhausted = allErrors.length > 0 && allErrors.every((message) => isRetryableGeminiError({ message }) && /429|RESOURCE_EXHAUSTED|QUOTA EXCEEDED|RATE LIMIT/i.test(message));
+
+  if (allKeysInvalid) {
+    throw new Error("All configured Gemini keys are invalid. Please verify VITE_GEMINI_API_KEY_1, _2, _3, _4, and _5.");
   }
 
-  throw new Error(`Could not generate the trip plan: ${lastError?.message || "Unknown error"}`);
+  if (allKeysQuotaExhausted) {
+    throw new Error("All configured Gemini keys are currently rate-limited or quota-exhausted. Please try again later.");
+  }
+
+  throw new Error("Could not generate the trip plan after trying all configured Gemini keys. Please try again.");
 }

@@ -1,5 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 
+const LAST_WORKING_GEMINI_KEY_LABEL = 'elsk:last-working-gemini-key-label';
+
+export type AIClientWithSource = {
+  client: GoogleGenAI;
+  sourceLabel: string;
+};
+
 declare global {
   interface Window {
     aistudio: {
@@ -32,26 +39,60 @@ export const getAIClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
-export const getAIClientsWithFallback = () => {
-  const clients: GoogleGenAI[] = [];
-  const envKeys = [
-    import.meta.env?.VITE_GEMINI_API_KEY_1,
-    import.meta.env?.VITE_GEMINI_API_KEY_2,
-    import.meta.env?.VITE_GEMINI_API_KEY_3,
-    import.meta.env?.VITE_GEMINI_API_KEY_4,
-    import.meta.env?.VITE_GEMINI_API_KEY_5,
-    import.meta.env?.VITE_GEMINI_API_KEY,
-  ].filter((k): k is string => !!k && k !== "AI Studio Free Tier");
+function getLastWorkingGeminiKeyLabel() {
+  try {
+    return window.localStorage.getItem(LAST_WORKING_GEMINI_KEY_LABEL) || '';
+  } catch {
+    return '';
+  }
+}
 
-  // Keep order deterministic and avoid creating duplicate clients for repeated keys.
-  const uniqueKeys = Array.from(new Set(envKeys));
-  uniqueKeys.forEach((apiKey) => {
-    clients.push(new GoogleGenAI({ apiKey }));
+export function setLastWorkingGeminiKeyLabel(sourceLabel: string) {
+  if (!sourceLabel.startsWith('VITE_GEMINI_API_KEY')) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(LAST_WORKING_GEMINI_KEY_LABEL, sourceLabel);
+  } catch {
+    // Ignore storage failures and continue with deterministic default ordering.
+  }
+}
+
+function rotateEntriesFromLastSuccess<T extends { sourceLabel: string }>(entries: T[]) {
+  const lastWorkingSourceLabel = getLastWorkingGeminiKeyLabel();
+  if (!lastWorkingSourceLabel) {
+    return entries;
+  }
+
+  const startIndex = entries.findIndex((entry) => entry.sourceLabel === lastWorkingSourceLabel);
+  if (startIndex <= 0) {
+    return entries;
+  }
+
+  return [...entries.slice(startIndex), ...entries.slice(0, startIndex)];
+}
+
+export const getAIClientsWithFallback = () => {
+  const clients: AIClientWithSource[] = [];
+  const envKeys = [
+    { sourceLabel: 'VITE_GEMINI_API_KEY_1', apiKey: import.meta.env?.VITE_GEMINI_API_KEY_1 },
+    { sourceLabel: 'VITE_GEMINI_API_KEY_2', apiKey: import.meta.env?.VITE_GEMINI_API_KEY_2 },
+    { sourceLabel: 'VITE_GEMINI_API_KEY_3', apiKey: import.meta.env?.VITE_GEMINI_API_KEY_3 },
+    { sourceLabel: 'VITE_GEMINI_API_KEY_4', apiKey: import.meta.env?.VITE_GEMINI_API_KEY_4 },
+    { sourceLabel: 'VITE_GEMINI_API_KEY_5', apiKey: import.meta.env?.VITE_GEMINI_API_KEY_5 },
+    { sourceLabel: 'VITE_GEMINI_API_KEY', apiKey: import.meta.env?.VITE_GEMINI_API_KEY },
+  ]
+    .filter((entry): entry is { sourceLabel: string; apiKey: string } => !!entry.apiKey && entry.apiKey !== "AI Studio Free Tier")
+    .filter((entry, index, allEntries) => allEntries.findIndex((candidate) => candidate.apiKey === entry.apiKey) === index);
+
+  rotateEntriesFromLastSuccess(envKeys).forEach(({ apiKey, sourceLabel }) => {
+    clients.push({ client: new GoogleGenAI({ apiKey }), sourceLabel });
   });
 
   // Preserve legacy behavior as final fallback for AI Studio/system key setups.
   try {
-    clients.push(getAIClient());
+    clients.push({ client: getAIClient(), sourceLabel: 'legacy-fallback' });
   } catch {
     // Ignore; missing key is handled by caller if no client succeeds.
   }
