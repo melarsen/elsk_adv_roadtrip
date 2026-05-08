@@ -132,10 +132,21 @@ export default function App() {
     window.location.href = mailtoLink;
   };
 
+  const shouldAutoDownloadPdf = () => {
+    const userAgent = navigator.userAgent || '';
+    const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+
+    return !(isMobileUserAgent || isTouchDevice);
+  };
+
   const persistGeneratedTrip = async (generatedPlan: TripPlan, request: TripRequest) => {
     setSavingPdf(true);
     try {
       const { blob, fileName } = await buildTripPlanPdf(generatedPlan, request);
+      if (shouldAutoDownloadPdf()) {
+        triggerPdfDownload(blob, fileName);
+      }
       const userId = getOrCreateUserId();
       const pdfUrl = await uploadTripPdfToSupabase(blob, fileName, userId);
 
@@ -847,6 +858,22 @@ export default function App() {
                     </div>
                   </section>
                 ))}
+              </div>
+
+              <div className="glass-card p-6 flex flex-wrap justify-center gap-4">
+                <button
+                  onClick={handleSendEmail}
+                  className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-800 font-medium underline underline-offset-4"
+                >
+                  Share with a friend <Mail size={16} />
+                </button>
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={savingPdf || !plan}
+                  className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-800 font-medium underline underline-offset-4 disabled:opacity-50"
+                >
+                  Download PDF <FileText size={16} />
+                </button>
               </div>
             </motion.div>
           )}

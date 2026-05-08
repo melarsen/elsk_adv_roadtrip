@@ -7,6 +7,18 @@ const PAGE_WIDTH = 210;
 const MARGIN = 16;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
 const LINE_HEIGHT = 6;
+const IMAGE_HEIGHT = 42;
+const IMAGE_GAP = 4;
+const IMAGE_SECTION_PADDING = 3;
+
+type DataUrlImage = {
+  dataUrl: string;
+  format: 'JPEG' | 'PNG' | 'WEBP';
+};
+
+const APP_URL = 'https://elsk-adv-roadtrip.vercel.app/';
+const FOOTER_TEXT = 'Created by ELSK Adventures - with love for unforgettable journeys.';
+const FOOTER_COPYRIGHT = '© 2026 ELSK Adventures. All rights reserved.';
 
 function sanitizeFilePart(value: string) {
   return value
@@ -57,6 +69,105 @@ function writeLink(doc: PdfDocument, label: string, url: string, y: number, inde
   doc.setTextColor(45, 55, 72);
 
   return cursorY + LINE_HEIGHT;
+}
+
+async function loadImageAsDataUrl(src: string): Promise<DataUrlImage | null> {
+  const safeSrc = src?.trim();
+  if (!safeSrc) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(safeSrc);
+    if (!response.ok) {
+      return null;
+    }
+
+    const blob = await response.blob();
+    const format = blob.type.includes('png')
+      ? 'PNG'
+      : blob.type.includes('webp')
+        ? 'WEBP'
+        : 'JPEG';
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+          return;
+        }
+
+        reject(new Error('Could not read image data'));
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('Could not read image data'));
+      reader.readAsDataURL(blob);
+    });
+
+    return { dataUrl, format };
+  } catch {
+    return null;
+  }
+}
+
+async function writeImageRow(doc: PdfDocument, imageUrls: string[], y: number) {
+  const images = (await Promise.all(imageUrls.map((url) => loadImageAsDataUrl(url)))).filter(
+    (image): image is DataUrlImage => Boolean(image),
+  );
+
+  if (images.length === 0) {
+    return y;
+  }
+
+  const limitedImages = images.slice(0, 2);
+  const imageWidth = limitedImages.length === 1
+    ? CONTENT_WIDTH
+    : (CONTENT_WIDTH - IMAGE_GAP) / 2;
+  let cursorY = ensurePageSpace(doc, y, IMAGE_HEIGHT + LINE_HEIGHT + IMAGE_SECTION_PADDING * 2);
+
+  doc.setDrawColor(226, 232, 240);
+  doc.roundedRect(
+    MARGIN,
+    cursorY,
+    CONTENT_WIDTH,
+    IMAGE_HEIGHT + IMAGE_SECTION_PADDING * 2,
+    2,
+    2,
+  );
+  cursorY += IMAGE_SECTION_PADDING;
+
+  limitedImages.forEach((image, index) => {
+    const imageX = MARGIN + index * (imageWidth + IMAGE_GAP);
+    doc.addImage(image.dataUrl, image.format, imageX, cursorY, imageWidth, IMAGE_HEIGHT, undefined, 'MEDIUM');
+  });
+
+  return cursorY + IMAGE_HEIGHT + LINE_HEIGHT;
+}
+
+function addPdfFooter(doc: PdfDocument) {
+  const pageCount = doc.getNumberOfPages();
+
+  for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+    doc.setPage(pageNumber);
+
+    const footerTop = PAGE_HEIGHT - 20;
+    doc.setDrawColor(226, 232, 240);
+    doc.line(MARGIN, footerTop - 4, PAGE_WIDTH - MARGIN, footerTop - 4);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text(FOOTER_TEXT, MARGIN, footerTop);
+    doc.text(FOOTER_COPYRIGHT, MARGIN, footerTop + 5);
+
+    doc.setTextColor(0, 102, 204);
+    doc.text(APP_URL, MARGIN, footerTop + 10);
+    const width = doc.getTextWidth(APP_URL);
+    doc.link(MARGIN, footerTop + 6, width, 5, { url: APP_URL });
+    doc.line(MARGIN, footerTop + 11, MARGIN + width, footerTop + 11);
+  }
+
+  doc.setTextColor(45, 55, 72);
 }
 
 export interface BuiltPdf {
@@ -117,7 +228,7 @@ export async function buildTripPlanPdf(plan: TripPlan, request: TripRequest): Pr
     y += 2;
   }
 
-  plan.days.forEach((day) => {
+  for (const day of plan.days) {
     y = ensurePageSpace(doc, y, LINE_HEIGHT * 4);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
@@ -152,12 +263,13 @@ export async function buildTripPlanPdf(plan: TripPlan, request: TripRequest): Pr
     y += LINE_HEIGHT;
 
     doc.setFont('helvetica', 'normal');
-    day.accommodations.forEach((accommodation, index) => {
+    for (const [index, accommodation] of day.accommodations.entries()) {
       y = writeWrappedText(
         doc,
         `${index + 1}. ${accommodation.name}${accommodation.location ? ` - ${accommodation.location}` : ''}${accommodation.priceEstimate ? ` (${accommodation.priceEstimate})` : ''}`,
         y,
       );
+      y = await writeImageRow(doc, accommodation.images.slice(0, 2), y);
       y = writeWrappedText(doc, accommodation.description, y, { indent: 4, color: [82, 82, 91] });
       y = writeWrappedText(doc, `Why it fits: ${accommodation.whyRecommended}`, y, { indent: 4, color: [82, 82, 91] });
       y = writeWrappedText(doc, `Source: ${accommodation.source}`, y, { indent: 4, color: [82, 82, 91] });
@@ -165,10 +277,12 @@ export async function buildTripPlanPdf(plan: TripPlan, request: TripRequest): Pr
         y = writeLink(doc, `Hotel link: ${accommodation.name}`, accommodation.websiteUrl, y, 4);
       }
       y += 2;
-    });
+    }
 
     y += 4;
-  });
+  }
+
+  addPdfFooter(doc);
 
   const fileName = `elsk-roadtrip-${sanitizeFilePart(request.start)}-to-${sanitizeFilePart(request.destination)}.pdf`;
   const blob = doc.output('blob');

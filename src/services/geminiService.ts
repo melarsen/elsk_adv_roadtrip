@@ -45,6 +45,48 @@ export interface TripPlan {
   googleMapsLink: string;
 }
 
+const DISALLOWED_IMAGE_HOSTS = [
+  'picsum.photos',
+  'placehold.co',
+  'via.placeholder.com',
+  'placekitten.com',
+  'dummyimage.com',
+];
+
+function normalizeAccommodationImages(images: unknown): string[] {
+  if (!Array.isArray(images)) {
+    return [];
+  }
+
+  return images
+    .filter((image): image is string => typeof image === 'string' && image.trim().length > 0)
+    .map((image) => image.trim())
+    .filter((image) => image.startsWith('https://') || image.startsWith('http://'))
+    .filter((image) => {
+      try {
+        const hostname = new URL(image).hostname.toLowerCase();
+        return !DISALLOWED_IMAGE_HOSTS.some((host) => hostname === host || hostname.endsWith(`.${host}`));
+      } catch {
+        return false;
+      }
+    })
+    .filter((image, index, allImages) => allImages.indexOf(image) === index)
+    .slice(0, 4);
+}
+
+function normalizeTripPlan(plan: TripPlan): TripPlan {
+  return {
+    ...plan,
+    days: plan.days.map((day) => ({
+      ...day,
+      accommodations: day.accommodations.map((accommodation) => ({
+        ...accommodation,
+        images: normalizeAccommodationImages(accommodation.images),
+      })),
+    })),
+  };
+}
+
 export async function generateTripPlan(req: TripRequest): Promise<TripPlan> {
   const aiClients = getAIClientsWithFallback();
   if (aiClients.length === 0) {
@@ -76,7 +118,10 @@ export async function generateTripPlan(req: TripRequest): Promise<TripPlan> {
        - Source (e.g. Booking.com, Hotels.com, Airbnb).
        - Exact GPS coordinates.
        - A VERIFIED link to an official site, booking page, or Wikipedia page.
-       - Include 2-4 image URLs (use https://picsum.photos/seed/{random}/800/600).
+       - Include 0-4 image URLs that actually show that exact hotel or property.
+       - Use only verified hotel-specific image URLs from the official hotel site, booking page, or their image CDN.
+       - Do not use placeholder, stock, generic, or random image services.
+       - If you cannot provide reliable hotel-specific image URLs, return an empty images array.
     4. Include start and end coordinates for that day's driving segment.
 
     Important: Use your built-in knowledge of geography and travel destinations to find real places, routes, and coordinates.
@@ -119,7 +164,7 @@ export async function generateTripPlan(req: TripRequest): Promise<TripPlan> {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       const jsonStr = jsonMatch ? jsonMatch[0] : text;
 
-      return JSON.parse(jsonStr);
+      return normalizeTripPlan(JSON.parse(jsonStr));
     } catch (e: any) {
       lastError = e;
       const message = String(e?.message || "");
