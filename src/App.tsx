@@ -213,9 +213,6 @@ export default function App() {
     setSavingPdf(true);
     try {
       const { blob, fileName } = await buildTripPlanPdf(generatedPlan, request);
-      if (shouldAutoDownloadPdf()) {
-        triggerPdfDownload(blob, fileName);
-      }
       const userId = getOrCreateUserId();
       const pdfUrl = await uploadTripPdfToSupabase(blob, fileName, userId);
 

@@ -63,7 +63,7 @@ function writeLink(doc: PdfDocument, label: string, url: string, y: number, inde
   doc.setTextColor(0, 102, 204);
   doc.text(label, x, cursorY);
   const width = doc.getTextWidth(label);
-  doc.link(x, cursorY - 4, width, 5, { url: safeUrl });
+  doc.link(x, cursorY - LINE_HEIGHT + 1, width, LINE_HEIGHT, { url: safeUrl });
   doc.setDrawColor(0, 102, 204);
   doc.line(x, cursorY + 1, x + width, cursorY + 1);
   doc.setTextColor(45, 55, 72);
@@ -163,7 +163,7 @@ function addPdfFooter(doc: PdfDocument) {
     doc.setTextColor(0, 102, 204);
     doc.text(APP_URL, MARGIN, footerTop + 10);
     const width = doc.getTextWidth(APP_URL);
-    doc.link(MARGIN, footerTop + 6, width, 5, { url: APP_URL });
+    doc.link(MARGIN, footerTop + 6, width, LINE_HEIGHT, { url: APP_URL });
     doc.line(MARGIN, footerTop + 11, MARGIN + width, footerTop + 11);
   }
 
